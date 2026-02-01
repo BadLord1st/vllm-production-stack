@@ -1,0 +1,26 @@
+# Example values (snippet) - do not commit secrets here
+# This file is an example showing openai-2-7b-fp8 scaled, others set to 0
+servingEngineSpec:
+  modelSpec:
+    - name: "openai-2-7b-fp8"
+      replicaCount: 4  # replaced by script to number of GPU nodes (or FORCE_REPLICAS)
+      repository: "vllm/vllm-openai"
+      tag: "latest-x86_64-cu130"
+      modelURL: "openai/gpt-oss-20b"
+      requestCPU: 8
+      requestMemory: "32Gi"
+      requestGPU: 1
+    - name: "gpt-oss-20b"
+      replicaCount: 0
+    - name: "other-model"
+      replicaCount: 0
+
+# sharedPvcStorage and routerSpec kept from original my-values.yaml
+sharedPvcStorage:
+  size: "5Ti"
+  storageClass: "nfs-manual"
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: "10.14.49.31"
+    path: "/external/disk/data"

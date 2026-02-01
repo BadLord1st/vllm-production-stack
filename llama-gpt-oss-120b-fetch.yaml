@@ -1,0 +1,64 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: llama-gpt-oss-120b-fetch
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: fetch
+          image: python:3.12-slim
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              set -e
+              ulimit -n 1048576
+              python -m pip install --no-index --find-links /models/wheels312 huggingface_hub
+              python - <<'PY'
+              from huggingface_hub import snapshot_download
+              import os, traceback
+
+              repo_id = "ggml-org/gpt-oss-120b-GGUF"
+              local_dir = "/models/llama-cache/ggml-org/gpt-oss-120b-GGUF"
+
+              if os.path.isdir(local_dir):
+                  for f in os.listdir(local_dir):
+                      if f.endswith(".gguf") or f.endswith(".gguf.downloadInProgress"):
+                          try:
+                              os.remove(os.path.join(local_dir, f))
+                          except FileNotFoundError:
+                              pass
+
+              os.makedirs(local_dir, exist_ok=True)
+
+              try:
+                  os.environ["HF_HUB_DISABLE_XET"] = "1"
+                  os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"
+                  snapshot_download(
+                      repo_id=repo_id,
+                      local_dir=local_dir,
+                      local_dir_use_symlinks=False,
+                      token=os.environ.get("HUGGING_FACE_HUB_TOKEN"),
+                  )
+                  print("Download complete")
+              except Exception:
+                  traceback.print_exc()
+                  raise
+              PY
+          env:
+            - name: HUGGING_FACE_HUB_TOKEN
+              value: "REDACTED_HF_TOKEN"
+            - name: HF_HUB_DISABLE_XET
+              value: "1"
+            - name: HF_HUB_DISABLE_PROGRESS_BARS
+              value: "1"
+          volumeMounts:
+            - name: shared-models
+              mountPath: /models
+      volumes:
+        - name: shared-models
+          persistentVolumeClaim:
+            claimName: vllm-shared-pvc-storage-claim

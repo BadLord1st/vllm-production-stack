@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llama-gpt-oss-120b
+  labels:
+    app: llama-gpt-oss-120b
+spec:
+  replicas: 8
+  selector:
+    matchLabels:
+      app: llama-gpt-oss-120b
+  template:
+    metadata:
+      labels:
+        app: llama-gpt-oss-120b
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - gpu35
+                      - gpu36
+                      - gpu37
+                      - gpu38
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              app: llama-gpt-oss-120b
+      containers:
+        - name: llama-server
+          image: ghcr.io/ggml-org/llama.cpp:full-cuda-b7524
+          command:
+            - "/app/llama-server"
+          args:
+            - "-m"
+            - "/models/llama-cache/ggml-org/gpt-oss-120b-GGUF/gpt-oss-120b-mxfp4-00001-of-00003.gguf"
+            - "--ctx-size"
+            - "0"
+            - "--jinja"
+            - "-ub"
+            - "2048"
+            - "-b"
+            - "2048"
+            - "--temp"
+            - "1.0"
+            - "--top-p"
+            - "1.0"
+            - "--host"
+            - "0.0.0.0"
+            - "--port"
+            - "8000"
+            - "--n-gpu-layers"
+            - "99"
+          env:
+            - name: LD_LIBRARY_PATH
+              value: "/app"
+          ports:
+            - containerPort: 8000
+          resources:
+            requests:
+              cpu: "8"
+              memory: "64Gi"
+              nvidia.com/gpu: "1"
+            limits:
+              cpu: "8"
+              memory: "64Gi"
+              nvidia.com/gpu: "1"
+          volumeMounts:
+            - name: shared-models
+              mountPath: /models
+          workingDir: /models
+      volumes:
+        - name: shared-models
+          persistentVolumeClaim:
+            claimName: vllm-shared-pvc-storage-claim
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llama-gpt-oss-120b
+  labels:
+    app: llama-gpt-oss-120b
+spec:
+  type: NodePort
+  selector:
+    app: llama-gpt-oss-120b
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

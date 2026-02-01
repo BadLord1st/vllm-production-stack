@@ -43,6 +43,13 @@ spec:
         helm-release-name: {{ .Release.Name }}
       {{- include "chart.engineLabels" . | nindent 8 }}
     spec:
+      {{- if hasKey $modelSpec "podTopologySpreadConstraints" }}
+      topologySpreadConstraints:
+        {{- toYaml $modelSpec.podTopologySpreadConstraints | nindent 8 }}
+      {{- else if .Values.servingEngineSpec.podTopologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml .Values.servingEngineSpec.podTopologySpreadConstraints | nindent 8 }}
+      {{- end }}
       {{- if $modelSpec.priorityClassName }}
       priorityClassName: {{ $modelSpec.priorityClassName | quote }}
       {{- end }}

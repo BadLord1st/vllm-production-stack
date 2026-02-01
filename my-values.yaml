@@ -1,0 +1,101 @@
+servingEngineSpec:
+  runtimeClassName: ""
+  strategy:
+    type: Recreate
+  modelSpec:
+    - name: "openai-2-7b-fp8"
+      repository: "vllm/vllm-openai"
+      tag: "latest-x86_64-cu130"
+      modelURL: "/data/shared-pvc-storage/model"
+      replicaCount: 10
+      requestCPU: 8
+      requestMemory: "32Gi"
+      requestGPU: 1
+      pvcStorage:
+        emptyDir:
+          medium: ""
+          sizeLimit: "100Gi"
+      storageClass: "local-path"
+      env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          value: "REDACTED_HF_TOKEN"
+        - name: HF_ENDPOINT
+          value: "http://5.129.204.167:8081"
+        - name: LD_LIBRARY_PATH
+          value: "/usr/lib/x86_64-linux-gnu"
+      vllmConfig:
+        extraArgs:
+          - "--served-model-name"
+          - "allenai/olmOCR-2-7B-1025-FP8"
+      podTopologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              model: openai-2-7b-fp8
+              helm-release-name: vllm
+      hf_token: "REDACTED_HF_TOKEN"
+    - name: "gpt-oss-20b"
+      repository: "vllm/vllm-openai"
+      tag: "cu130-nightly-x86_64"
+      modelURL: "openai/gpt-oss-20b"
+      replicaCount: 0
+      requestCPU: 8
+      requestMemory: "32Gi"
+      requestGPU: 1
+      pvcStorage:
+        emptyDir:
+          medium: ""
+          sizeLimit: "100Gi"
+      storageClass: "local-path"
+      env:
+        - name: HUGGING_FACE_HUB_TOKEN
+          value: "REDACTED_HF_TOKEN"
+        - name: HF_ENDPOINT
+          value: "http://5.129.204.167:8081"
+      vllmConfig:
+        tensorParallelSize: 1
+        extraArgs:
+          - "--served-model-name"
+          - "openai/gpt-oss-20b"
+      nodeSelectorTerms:
+        - matchExpressions:
+          - key: kubernetes.io/hostname
+            operator: NotIn
+            values:
+              - localh100
+      podTopologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: "kubernetes.io/hostname"
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              model: gpt-oss-20b
+              helm-release-name: vllm
+      hf_token: "REDACTED_HF_TOKEN"
+
+sharedPvcStorage:
+  size: "5Ti"
+  storageClass: "nfs-manual"
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    server: "10.14.49.31"
+    path: "/external/disk/data"
+
+routerSpec:
+  resources:
+    requests:
+      cpu: 400m
+      memory: 2Gi
+    limits:
+      memory: 2Gi
+  serviceType: NodePort
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+        - matchExpressions:
+          - key: node-role.kubernetes.io/gpu
+            operator: Exists
