@@ -18,7 +18,10 @@ servingEngineSpec:
       storageClass: "local-path"
       env:
         - name: HUGGING_FACE_HUB_TOKEN
-          value: "REDACTED_HF_TOKEN"
+          valueFrom:
+            secretKeyRef:
+              name: vllm-hf-token
+              key: HUGGING_FACE_HUB_TOKEN
         - name: HF_ENDPOINT
           value: "http://5.129.204.167:8081"
         - name: LD_LIBRARY_PATH
@@ -35,7 +38,9 @@ servingEngineSpec:
             matchLabels:
               model: openai-2-7b-fp8
               helm-release-name: vllm
-      hf_token: "REDACTED_HF_TOKEN"
+      hf_token:
+        secretName: vllm-hf-token
+        secretKey: HUGGING_FACE_HUB_TOKEN
     - name: "gpt-oss-20b"
       repository: "vllm/vllm-openai"
       tag: "cu130-nightly-x86_64"
@@ -51,7 +56,10 @@ servingEngineSpec:
       storageClass: "local-path"
       env:
         - name: HUGGING_FACE_HUB_TOKEN
-          value: "REDACTED_HF_TOKEN"
+          valueFrom:
+            secretKeyRef:
+              name: vllm-hf-token
+              key: HUGGING_FACE_HUB_TOKEN
         - name: HF_ENDPOINT
           value: "http://5.129.204.167:8081"
       vllmConfig:
@@ -73,7 +81,9 @@ servingEngineSpec:
             matchLabels:
               model: gpt-oss-20b
               helm-release-name: vllm
-      hf_token: "REDACTED_HF_TOKEN"
+      hf_token:
+        secretName: vllm-hf-token
+        secretKey: HUGGING_FACE_HUB_TOKEN
 
 sharedPvcStorage:
   size: "5Ti"

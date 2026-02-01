@@ -50,7 +50,10 @@ spec:
               PY
           env:
             - name: HUGGING_FACE_HUB_TOKEN
-              value: "REDACTED_HF_TOKEN"
+              valueFrom:
+                secretKeyRef:
+                  name: vllm-hf-token
+                  key: HUGGING_FACE_HUB_TOKEN
             - name: HF_HUB_DISABLE_XET
               value: "1"
             - name: HF_HUB_DISABLE_PROGRESS_BARS
